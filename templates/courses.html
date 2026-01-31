@@ -1,0 +1,203 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Cursos | Panel NextDNS Colegio</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f4f6f8;
+            margin: 0;
+        }
+
+        header {
+            background: #0b2a3d;
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            align-items: center;
+        }
+
+        header img {
+            height: 40px;
+            margin-right: 15px;
+        }
+
+        header h1 {
+            font-size: 20px;
+            margin: 0;
+        }
+
+        main {
+            padding: 30px;
+        }
+
+        h2 {
+            margin-top: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background: #eef2f5;
+        }
+
+        button {
+            padding: 6px 10px;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .btn-add {
+            background: #1e88e5;
+            color: white;
+        }
+
+        .btn-delete {
+            background: #e53935;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #90a4ae;
+            color: white;
+        }
+
+        .form-box {
+            background: white;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 6px;
+        }
+
+        .form-box input, .form-box select {
+            padding: 6px;
+            margin-right: 10px;
+        }
+
+        .actions button {
+            margin-right: 5px;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <img src="/static/davit.jpeg" alt="DavIT">
+    <h1>Panel NextDNS – Cursos</h1>
+</header>
+
+<main>
+
+    <div class="form-box">
+        <h2>Agregar curso</h2>
+
+        <input type="text" id="nombre" placeholder="Nombre (ej: 3B)">
+        <select id="turno">
+            <option value="mañana">Mañana</option>
+            <option value="tarde">Tarde</option>
+            <option value="vespertino">Vespertino</option>
+        </select>
+
+        <button class="btn-add" onclick="addCourse()">Agregar</button>
+    </div>
+
+    <h2>Listado de cursos</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Curso</th>
+                <th>Turno base</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody id="courses-body">
+        </tbody>
+    </table>
+
+</main>
+
+<script>
+async function loadCourses() {
+    const res = await fetch("/courses/");
+    const courses = await res.json();
+
+    const tbody = document.getElementById("courses-body");
+    tbody.innerHTML = "";
+
+    courses.forEach(c => {
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+            <td>${c.id}</td>
+            <td>${c.nombre}</td>
+            <td>${c.turno_base}</td>
+            <td class="actions">
+                <button class="btn-secondary" onclick="goSchedules(${c.id})">Horarios</button>
+                <button class="btn-delete" onclick="deleteCourse(${c.id})">Eliminar</button>
+            </td>
+        `;
+
+        tbody.appendChild(tr);
+    });
+}
+
+async function addCourse() {
+    const nombre = document.getElementById("nombre").value;
+    const turno = document.getElementById("turno").value;
+
+    if (!nombre) {
+        alert("Ingrese nombre del curso");
+        return;
+    }
+
+    await fetch("/courses/add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            nombre: nombre,
+            turno_base: turno
+        })
+    });
+
+    document.getElementById("nombre").value = "";
+    loadCourses();
+}
+
+async function deleteCourse(id) {
+    if (!confirm("¿Eliminar curso y TODO lo asociado?")) return;
+
+    await fetch(`/courses/delete/${id}`, {
+        method: "DELETE"
+    });
+
+    loadCourses();
+}
+
+function goSchedules(courseId) {
+    // más adelante
+    alert("Horarios del curso " + courseId + " (próximo paso)");
+}
+
+loadCourses();
+</script>
+
+</body>
+</html>

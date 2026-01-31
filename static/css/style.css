@@ -1,0 +1,25 @@
+.bg-davit {
+  background-color: #0B4FA3;
+}
+
+.sidebar {
+  background: #0E0E0E;
+  min-height: 100vh;
+  padding-top: 20px;
+}
+
+.sidebar a {
+  display: block;
+  color: #fff;
+  padding: 10px 20px;
+  text-decoration: none;
+}
+
+.sidebar a:hover {
+  background: #1FA3E0;
+}
+
+.card {
+  border: none;
+  border-radius: 8px;
+}

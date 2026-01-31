@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2 class="mb-4">Alumnos</h2>
+
+<!-- ================= BUSCADOR / FILTROS ================= -->
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="row g-2 align-items-end">
+
+      <div class="col-md-4">
+        <label class="form-label">Buscar</label>
+        <input id="searchInput" class="form-control"
+               placeholder="Nombre, apellido o dispositivo">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Curso</label>
+        <select id="filterCourse" class="form-select">
+          <option value="">Todos</option>
+          {% for c in courses %}
+            <option value="{{ c.nombre }}">{{ c.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Sexo</label>
+        <select id="filterSexo" class="form-select">
+          <option value="">Todos</option>
+          <option value="M">Masculino</option>
+          <option value="F">Femenino</option>
+        </select>
+      </div>
+
+      <div class="col-md-2 text-end">
+        <button class="btn btn-primary w-100"
+                data-bs-toggle="modal"
+                data-bs-target="#modalAddStudent">
+          + Alumno
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ================= LISTA DE ALUMNOS ================= -->
+<div id="studentsContainer">
+
+  {% for student in students %}
+  <div class="card mb-2 student-card"
+       data-nombre="{{ student.nombre|lower }}"
+       data-apellido="{{ student.apellido|lower }}"
+       data-sexo="{{ student.sexo }}"
+       data-curso="{{ student.course.nombre if student.course }}">
+
+    <div class="card-body">
+
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <h5 class="mb-1">
+            {{ student.apellido }}, {{ student.nombre }}
+            <small class="text-muted">
+              ({{ student.course.nombre }})
+            </small>
+          </h5>
+
+          <span class="badge bg-secondary">Sexo {{ student.sexo }}</span>
+          <span class="badge bg-info">
+            {{ student.devices|length }} dispositivos
+          </span>
+        </div>
+
+        <div class="text-end">
+          <button class="btn btn-sm btn-outline-primary mb-1"
+                  onclick="toggleDevices({{ student.id }})">
+            Dispositivos
+          </button>
+
+          <button class="btn btn-sm btn-outline-danger"
+                  onclick="deleteStudent({{ student.id }})">
+            Eliminar
+          </button>
+        </div>
+      </div>
+
+      <!-- ============ DISPOSITIVOS ============ -->
+      <div id="devices-{{ student.id }}" class="mt-3 d-none">
+
+        <table class="table table-sm align-middle">
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th>Nombre</th>
+              <th>ID NextDNS</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for device in student.devices %}
+            <tr>
+              <td>{{ device.tipo }}</td>
+              <td>{{ device.nombre }}</td>
+              <td><code>{{ device.nextdns_profile_id }}</code></td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-danger"
+                        onclick="deleteDevice({{ device.id }})">
+                  Eliminar
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <button class="btn btn-sm btn-success"
+                onclick="openAddDevice({{ student.id }})">
+          + Dispositivo
+        </button>
+
+      </div>
+
+    </div>
+  </div>
+  {% endfor %}
+
+</div>
+
+<!-- ================= MODAL NUEVO ALUMNO ================= -->
+<div class="modal fade" id="modalAddStudent" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Agregar alumno</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <input class="form-control mb-2" id="stNombre" placeholder="Nombre">
+        <input class="form-control mb-2" id="stApellido" placeholder="Apellido">
+
+        <select class="form-select mb-2" id="stSexo">
+          <option value="">Sexo</option>
+          <option value="M">Masculino</option>
+          <option value="F">Femenino</option>
+        </select>
+
+        <select class="form-select mb-2" id="stCurso">
+          {% for c in courses %}
+          <option value="{{ c.id }}">{{ c.nombre }}</option>
+          {% endfor %}
+        </select>
+
+        <input class="form-control mb-2"
+               id="stMailPadre"
+               placeholder="Email padre">
+
+        <input class="form-control mb-2"
+               id="stMailEscuela"
+               placeholder="Email escuela">
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancelar
+        </button>
+        <button class="btn btn-primary" onclick="saveStudent()">
+          Guardar
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL DISPOSITIVO ================= -->
+<div class="modal fade" id="modalAddDevice" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Agregar dispositivo</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <input type="hidden" id="deviceStudentId">
+
+        <select class="form-select mb-2" id="devTipo">
+          <option value="celular">Celular</option>
+          <option value="tablet">Tablet</option>
+          <option value="notebook">Notebook</option>
+        </select>
+
+        <input class="form-control"
+               id="devNombre"
+               placeholder="Nombre del dispositivo">
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancelar
+        </button>
+        <button class="btn btn-success" onclick="saveDevice()">
+          Agregar
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ================= JS ================= -->
+<script>
+function toggleDevices(id){
+  document.getElementById("devices-"+id).classList.toggle("d-none")
+}
+
+function openAddDevice(studentId){
+  document.getElementById("deviceStudentId").value = studentId
+  new bootstrap.Modal(
+    document.getElementById("modalAddDevice")
+  ).show()
+}
+
+function saveDevice(){
+  fetch("/devices/add",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      student_id: document.getElementById("deviceStudentId").value,
+      tipo: document.getElementById("devTipo").value,
+      nombre: document.getElementById("devNombre").value
+    })
+  }).then(()=>location.reload())
+}
+
+function deleteDevice(id){
+  if(confirm("Eliminar dispositivo?")){
+    fetch("/devices/delete/"+id,{method:"DELETE"})
+      .then(()=>location.reload())
+  }
+}
+
+function deleteStudent(id){
+  if(confirm("Eliminar alumno y todos sus dispositivos?")){
+    fetch("/students/delete/"+id,{method:"DELETE"})
+      .then(()=>location.reload())
+  }
+}
+
+document.getElementById("searchInput").addEventListener("input", filterStudents)
+document.getElementById("filterCourse").addEventListener("change", filterStudents)
+document.getElementById("filterSexo").addEventListener("change", filterStudents)
+
+function filterStudents(){
+  const q = searchInput.value.toLowerCase()
+  const curso = filterCourse.value
+  const sexo = filterSexo.value
+
+  document.querySelectorAll(".student-card").forEach(card=>{
+    const okSearch =
+      card.dataset.nombre.includes(q) ||
+      card.dataset.apellido.includes(q)
+
+    const okCurso =
+      !curso || card.dataset.curso === curso
+
+    const okSexo =
+      !sexo || card.dataset.sexo === sexo
+
+    card.style.display =
+      (okSearch && okCurso && okSexo) ? "" : "none"
+  })
+}
+</script>
+
+{% endblock %}
+
