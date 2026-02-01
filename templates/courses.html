@@ -1,203 +1,225 @@
+{% extends "base.html" %}
 
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Cursos | Panel NextDNS Colegio</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Gestión de Cursos</h2>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAddCourse">
+        + Nuevo Curso
+    </button>
+</div>
 
-    <style>
-        body {
-            font-family: Arial, Helvetica, sans-serif;
-            background: #f4f6f8;
-            margin: 0;
-        }
-
-        header {
-            background: #0b2a3d;
-            color: white;
-            padding: 15px 30px;
-            display: flex;
-            align-items: center;
-        }
-
-        header img {
-            height: 40px;
-            margin-right: 15px;
-        }
-
-        header h1 {
-            font-size: 20px;
-            margin: 0;
-        }
-
-        main {
-            padding: 30px;
-        }
-
-        h2 {
-            margin-top: 0;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-        }
-
-        th, td {
-            padding: 10px;
-            border-bottom: 1px solid #ddd;
-            text-align: left;
-        }
-
-        th {
-            background: #eef2f5;
-        }
-
-        button {
-            padding: 6px 10px;
-            border: none;
-            cursor: pointer;
-            border-radius: 4px;
-        }
-
-        .btn-add {
-            background: #1e88e5;
-            color: white;
-        }
-
-        .btn-delete {
-            background: #e53935;
-            color: white;
-        }
-
-        .btn-secondary {
-            background: #90a4ae;
-            color: white;
-        }
-
-        .form-box {
-            background: white;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 6px;
-        }
-
-        .form-box input, .form-box select {
-            padding: 6px;
-            margin-right: 10px;
-        }
-
-        .actions button {
-            margin-right: 5px;
-        }
-    </style>
-</head>
-
-<body>
-
-<header>
-    <img src="/static/davit.jpeg" alt="DavIT">
-    <h1>Panel NextDNS – Cursos</h1>
-</header>
-
-<main>
-
-    <div class="form-box">
-        <h2>Agregar curso</h2>
-
-        <input type="text" id="nombre" placeholder="Nombre (ej: 3B)">
-        <select id="turno">
-            <option value="mañana">Mañana</option>
-            <option value="tarde">Tarde</option>
-            <option value="vespertino">Vespertino</option>
-        </select>
-
-        <button class="btn-add" onclick="addCourse()">Agregar</button>
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>Curso</th>
+                    <th>Turno Base</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="coursesTableBody">
+                </tbody>
+        </table>
     </div>
+</div>
 
-    <h2>Listado de cursos</h2>
+<div class="modal fade" id="modalAddCourse" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-davit text-white">
+                <h5 class="modal-title">Nuevo Curso</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label>Nombre (Ej: 3ro B)</label>
+                    <input type="text" id="newCourseName" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label>Turno por defecto</label>
+                    <select id="newCourseTurno" class="form-select">
+                        <option value="mañana">Mañana</option>
+                        <option value="tarde">Tarde</option>
+                        <option value="vespertino">Vespertino</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="createCourse()">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Curso</th>
-                <th>Turno base</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody id="courses-body">
-        </tbody>
-    </table>
+<div class="modal fade" id="modalSchedules" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">Configurar Horarios y Contraturnos</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="currentCourseId">
+                
+                <div class="card bg-light mb-3">
+                    <div class="card-body">
+                        <h6>Agregar Regla de Bloqueo (NextDNS ON)</h6>
+                        <div class="row g-2">
+                            <div class="col-md-2">
+                                <select id="schDia" class="form-select form-select-sm">
+                                    <option value="0">Lunes</option>
+                                    <option value="1">Martes</option>
+                                    <option value="2">Miércoles</option>
+                                    <option value="3">Jueves</option>
+                                    <option value="4">Viernes</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="time" id="schIni" class="form-control form-select-sm">
+                            </div>
+                            <div class="col-md-2">
+                                <input type="time" id="schFin" class="form-control form-select-sm">
+                            </div>
+                            <div class="col-md-2">
+                                <select id="schTipo" class="form-select form-select-sm">
+                                    <option value="contraturno">Contraturno</option>
+                                    <option value="tiempo_muerto">Tiempo Muerto</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <select id="schSexo" class="form-select form-select-sm">
+                                    <option value="ALL">Todos (Sexo)</option>
+                                    <option value="M">Solo Varones</option>
+                                    <option value="F">Solo Mujeres</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-sm btn-success w-100" onclick="addSchedule()">Agregar</button>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-md-4">
+                                <input type="text" id="schComision" class="form-control form-control-sm" placeholder="Comisión (A, B) opcional">
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-</main>
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Día</th>
+                            <th>Hora</th>
+                            <th>Tipo</th>
+                            <th>Filtro</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scheduleListBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
-async function loadCourses() {
-    const res = await fetch("/courses/");
-    const courses = await res.json();
+document.addEventListener("DOMContentLoaded", loadCourses);
 
-    const tbody = document.getElementById("courses-body");
+async function loadCourses() {
+    const res = await fetch('/courses/');
+    const data = await res.json();
+    const tbody = document.getElementById("coursesTableBody");
     tbody.innerHTML = "";
 
-    courses.forEach(c => {
-        const tr = document.createElement("tr");
-
-        tr.innerHTML = `
-            <td>${c.id}</td>
-            <td>${c.nombre}</td>
-            <td>${c.turno_base}</td>
-            <td class="actions">
-                <button class="btn-secondary" onclick="goSchedules(${c.id})">Horarios</button>
-                <button class="btn-delete" onclick="deleteCourse(${c.id})">Eliminar</button>
-            </td>
+    data.forEach(c => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${c.nombre}</td>
+                <td><span class="badge bg-secondary">${c.turno_base}</span></td>
+                <td>
+                    <button class="btn btn-sm btn-info text-white" onclick="openScheduleModal(${c.id})">Horarios</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteCourse(${c.id})">Eliminar</button>
+                </td>
+            </tr>
         `;
-
-        tbody.appendChild(tr);
     });
 }
 
-async function addCourse() {
-    const nombre = document.getElementById("nombre").value;
-    const turno = document.getElementById("turno").value;
-
-    if (!nombre) {
-        alert("Ingrese nombre del curso");
-        return;
-    }
-
-    await fetch("/courses/add", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            nombre: nombre,
-            turno_base: turno
-        })
+async function createCourse() {
+    const nombre = document.getElementById('newCourseName').value;
+    const turno = document.getElementById('newCourseTurno').value;
+    
+    await fetch('/courses/add', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ nombre: nombre, turno_base: turno })
     });
-
-    document.getElementById("nombre").value = "";
-    loadCourses();
+    
+    location.reload();
 }
 
 async function deleteCourse(id) {
-    if (!confirm("¿Eliminar curso y TODO lo asociado?")) return;
-
-    await fetch(`/courses/delete/${id}`, {
-        method: "DELETE"
-    });
-
+    if(!confirm("¿Seguro? Se eliminarán todos los ALUMNOS y PERFILES de NextDNS asociados.")) return;
+    await fetch(`/courses/delete/${id}`, { method: 'DELETE' });
     loadCourses();
 }
 
-function goSchedules(courseId) {
-    // más adelante
-    alert("Horarios del curso " + courseId + " (próximo paso)");
+// --- LOGICA DE HORARIOS ---
+
+let currentCourseId = null;
+
+async function openScheduleModal(id) {
+    currentCourseId = id;
+    const modal = new bootstrap.Modal(document.getElementById('modalSchedules'));
+    modal.show();
+    loadSchedules(id);
 }
 
-loadCourses();
-</script>
+async function loadSchedules(courseId) {
+    const res = await fetch(`/courses/${courseId}/schedules`); // Necesitas crear esta ruta GET en courses.py
+    const data = await res.json();
+    const tbody = document.getElementById('scheduleListBody');
+    tbody.innerHTML = "";
 
-</body>
-</html>
+    const days = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+
+    data.forEach(s => {
+        let filtro = "Todos";
+        if(s.sexo !== "ALL") filtro = s.sexo === "M" ? "Varones" : "Mujeres";
+        if(s.comision) filtro += ` (Com: ${s.comision})`;
+
+        tbody.innerHTML += `
+            <tr>
+                <td>${days[s.dia_semana]}</td>
+                <td>${s.hora_inicio} - ${s.hora_fin}</td>
+                <td>${s.tipo}</td>
+                <td>${filtro}</td>
+                <td><button class="btn btn-sm btn-outline-danger" onclick="deleteSchedule(${s.id})">X</button></td>
+            </tr>
+        `;
+    });
+}
+
+async function addSchedule() {
+    const payload = {
+        tipo: document.getElementById('schTipo').value,
+        dia_semana: parseInt(document.getElementById('schDia').value),
+        hora_inicio: document.getElementById('schIni').value,
+        hora_fin: document.getElementById('schFin').value,
+        sexo: document.getElementById('schSexo').value,
+        comision: document.getElementById('schComision').value || null
+    };
+
+    if(!payload.hora_inicio || !payload.hora_fin) return alert("Falta hora");
+
+    await fetch(`/courses/${currentCourseId}/schedules/add`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+    });
+
+    loadSchedules(currentCourseId);
+}
+</script>
+{% endblock %}
