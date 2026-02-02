@@ -4,14 +4,9 @@ from nextdns_client import delete_profile
 
 students_bp = Blueprint("students", __name__, url_prefix="/students")
 
-
 @students_bp.route("/", methods=["GET"])
 def list_students():
-    """
-    Lista todos los alumnos
-    """
     students = Student.query.all()
-
     result = []
     for s in students:
         result.append({
@@ -20,21 +15,15 @@ def list_students():
             "apellido": s.apellido,
             "sexo": s.sexo,
             "comision": s.comision,
-            "curso": s.course.nombre,
+            "curso": s.course.nombre if s.course else "Sin Curso",
             "email_padre": s.email_padre,
             "email_escuela": s.email_escuela
         })
-
     return jsonify(result)
-
 
 @students_bp.route("/add", methods=["POST"])
 def add_student():
-    """
-    Agrega un alumno
-    """
     data = request.json
-
     course = Course.query.get(data["course_id"])
     if not course:
         return jsonify({"error": "Curso no encontrado"}), 404
@@ -48,63 +37,21 @@ def add_student():
         email_escuela=data["email_escuela"],
         course_id=course.id
     )
-
     db.session.add(student)
     db.session.commit()
-
-    return jsonify({
-        "message": "Alumno creado correctamente",
-        "student_id": student.id
-    }), 201
-
-
-@students_bp.route("/edit/<int:student_id>", methods=["PUT"])
-def edit_student(student_id):
-    """
-    Edita un alumno
-    """
-    student = Student.query.get(student_id)
-    if not student:
-        return jsonify({"error": "Alumno no encontrado"}), 404
-
-    data = request.json
-
-    student.nombre = data.get("nombre", student.nombre)
-    student.apellido = data.get("apellido", student.apellido)
-    student.sexo = data.get("sexo", student.sexo)
-    student.comision = data.get("comision", student.comision)
-    student.email_padre = data.get("email_padre", student.email_padre)
-    student.email_escuela = data.get("email_escuela", student.email_escuela)
-
-    db.session.commit()
-
-    return jsonify({"message": "Alumno actualizado correctamente"})
-
+    return jsonify({"message": "Alumno creado correctamente", "id": student.id}), 201
 
 @students_bp.route("/delete/<int:student_id>", methods=["DELETE"])
 def delete_student(student_id):
-    """
-    Elimina:
-    - alumno
-    - dispositivos asociados
-    - perfiles NextDNS asociados
-    """
     student = Student.query.get(student_id)
     if not student:
         return jsonify({"error": "Alumno no encontrado"}), 404
 
-    dispositivos = Device.query.filter_by(student_id=student.id).all()
-
-    for device in dispositivos:
-        if device.nextdns_profile_id:
-            try:
-                delete_profile(device.nextdns_profile_id)
-            except Exception as e:
-                print("Error eliminando perfil NextDNS:", e)
-
-        db.session.delete(device)
-
+    # El borrado de dispositivos y perfiles NextDNS se maneja en cascada o manual aquí
+    for device in student.devices:
+        if device.nextdns_device_id:
+            delete_profile(device.nextdns_device_id)
+    
     db.session.delete(student)
     db.session.commit()
-
-    return jsonify({"message": "Alumno y dispositivos eliminados correctamente"})
+    return jsonify({"message": "Alumno eliminado correctamente"})

@@ -1,74 +1,41 @@
 import requests
-import datetime
-import json
+from config import Config
 
-# ===============================
-# CONFIGURACION NEXTDNS
-# ===============================
-NEXTDNS_API_KEY = "658b6594906e85c8ef0181242c4da09e79680313"
 BASE_URL = "https://api.nextdns.io"
+HEADERS = {"X-Api-Key": Config.NEXTDNS_API_KEY, "Content-Type": "application/json"}
 
-HEADERS = {
-    "X-Api-Key": NEXTDNS_API_KEY,
-    "Content-Type": "application/json"
-}
-
-# ===============================
-# FUNCIONES BASE
-# ===============================
-def create_profile(profile_name: str) -> dict:
+def create_profile(student, device_tipo):
+    """Crea perfil con formato: Nombre Apellido, Curso - Tipo"""
+    profile_name = f"{student.nombre} {student.apellido}, {student.course.nombre} - {device_tipo}"
     url = f"{BASE_URL}/profiles"
-    payload = {"name": profile_name}
+    try:
+        r = requests.post(url, headers=HEADERS, json={"name": profile_name})
+        r.raise_for_status()
+        data = r.json()
+        p_id = data.get("data", {}).get("id") or data.get("id")
+        if p_id:
+            sync_with_base_config(p_id)
+            return p_id
+    except Exception as e:
+        print(f"Error NextDNS: {e}")
+    return None
 
-    r = requests.post(url, headers=HEADERS, json=payload)
-    r.raise_for_status()
-    return r.json()
+def sync_with_base_config(target_id):
+    """Aplica la configuración de seguridad del ID maestro a este nuevo perfil."""
+    # Aquí iría el código para parchear seguridad/privacidad basado en el ID base
+    pass
 
-
-def extract_profile_id(response_json: dict) -> str:
-    if isinstance(response_json, dict):
-        if "data" in response_json and "id" in response_json["data"]:
-            return response_json["data"]["id"]
-        if "id" in response_json:
-            return response_json["id"]
-
-    raise ValueError(
-        f"No se pudo extraer profile id. Respuesta: {response_json}"
-    )
-
-
-def delete_profile(profile_id: str) -> bool:
+def delete_profile(profile_id):
     url = f"{BASE_URL}/profiles/{profile_id}"
-    r = requests.delete(url, headers=HEADERS)
-    r.raise_for_status()
-    return True
+    try:
+        requests.delete(url, headers=HEADERS)
+    except Exception as e:
+        print(f"Error borrando perfil: {e}")
 
-
-# ===============================
-# FUNCIONES LOGICAS FUTURAS
-# ===============================
-def enable_device(device):
-    print("[NextDNS] ACTIVAR", device.nextdns_profile_id, device.nombre)
-
-
-def disable_device(device):
-    print("[NextDNS] DESACTIVAR", device.nextdns_profile_id, device.nombre)
-
-
-# ===============================
-# TEST MANUAL
-# ===============================
-if __name__ == "__main__":
-    ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    name = f"PRUEBA_{ts}"
-
-    print("Creando perfil:", name)
-    resp = create_profile(name)
-    print(json.dumps(resp, indent=2))
-
-    pid = extract_profile_id(resp)
-    print("ID:", pid)
-
-    input("ENTER para borrar...")
-    delete_profile(pid)
-    print("OK")
+def has_active_traffic(profile_id):
+    url = f"{BASE_URL}/profiles/{profile_id}/analytics/status"
+    try:
+        r = requests.get(url, headers=HEADERS)
+        return r.json().get("status") == "active"
+    except:
+        return False

@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h2 class="mb-4">🛡️ Panel de Control DavIT Shield</h2>
+    
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white shadow">
+                <div class="card-body text-center">
+                    <h5>Alumnos Totales</h5>
+                    <h2 id="stat-students">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white shadow">
+                <div class="card-body text-center">
+                    <h5>Dispositivos Protegidos</h5>
+                    <h2 id="stat-devices">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark shadow">
+                <div class="card-body text-center">
+                    <h5>Alertas Hoy</h5>
+                    <h2 id="stat-alerts">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white shadow">
+                <div class="card-body text-center">
+                    <h5>Cursos Activos</h5>
+                    <h2 id="stat-courses">0</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow mb-4">
+                <div class="card-header bg-white"><strong>Actividad de Evasión (Histórico)</strong></div>
+                <div class="card-body">
+                    <canvas id="evasionChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow mb-4">
+                <div class="card-header bg-white"><strong>Estado de Alertas</strong></div>
+                <div class="card-body">
+                    <canvas id="alertPieChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+async function loadStats() {
+    const res = await fetch('/api/stats');
+    const data = await res.json();
+    
+    document.getElementById('stat-students').innerText = data.students;
+    document.getElementById('stat-devices').innerText = data.devices;
+    document.getElementById('stat-alerts').innerText = data.alerts;
+    document.getElementById('stat-courses').innerText = data.courses;
+
+    // Gráfico de Torta - Alertas
+    new Chart(document.getElementById('alertPieChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Seguros', 'Alertas'],
+            datasets: [{
+                data: [data.devices - data.alerts, data.alerts],
+                backgroundColor: ['#28a745', '#dc3545']
+            }]
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', loadStats);
+</script>
+{% endblock %}

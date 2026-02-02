@@ -1,179 +1,57 @@
-{% extends "base.html" %}
-
-{% block content %}
-<div class="row mb-4">
-    <div class="col-md-8">
-        <h2>Listado de Alumnos</h2>
-    </div>
-    <div class="col-md-4 text-end">
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAddStudent">
-            + Nuevo Alumno
-        </button>
-    </div>
-</div>
-
-<div class="card mb-3 p-3 bg-light">
-    <div class="row g-2">
-        <div class="col-md-4">
-            <input type="text" id="searchBox" class="form-control" placeholder="Buscar por nombre...">
-        </div>
-        <div class="col-md-3">
-            <select id="filterCourse" class="form-select">
-                <option value="">Todos los cursos</option>
-                </select>
-        </div>
-    </div>
-</div>
-
-<div class="row" id="studentsGrid">
-    </div>
-
-<div class="modal fade" id="modalAddStudent" tabindex="-1">
+<div class="modal fade" id="modalDevices" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header bg-davit text-white">
-                <h5 class="modal-title">Registrar Alumno</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Dispositivos de <span id="devStudentName"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="row g-2">
-                    <div class="col-6">
-                        <label>Nombre</label>
-                        <input type="text" id="stNombre" class="form-control">
-                    </div>
-                    <div class="col-6">
-                        <label>Apellido</label>
-                        <input type="text" id="stApellido" class="form-control">
-                    </div>
+                <div id="deviceList" class="list-group mb-3"></div>
+                <h6>+ Agregar Dispositivo</h6>
+                <input type="hidden" id="devStudentId">
+                <div class="input-group mb-2">
+                    <input type="text" id="devTipo" class="form-control" placeholder="Tipo (Celular, PC)">
+                    <input type="text" id="devModelo" class="form-control" placeholder="Modelo (Samsung, Dell)">
+                    <button class="btn btn-success" onclick="saveDevice()">Add</button>
                 </div>
-                <div class="mt-3">
-                    <label>Curso</label>
-                    <select id="stCurso" class="form-select"></select>
-                </div>
-                
-                <div class="row g-2 mt-2">
-                    <div class="col-6">
-                        <label>Sexo (Gimnasia)</label>
-                        <select id="stSexo" class="form-select">
-                            <option value="M">Masculino</option>
-                            <option value="F">Femenino</option>
-                        </select>
-                    </div>
-                    <div class="col-6">
-                        <label>Comisión (Opcional)</label>
-                        <input type="text" id="stComision" class="form-control" placeholder="A, B...">
-                    </div>
-                </div>
-
-                <div class="mt-3">
-                    <label>Emails Alerta (Padre / Escuela)</label>
-                    <input type="email" id="stEmailPadre" class="form-control mb-1" placeholder="padre@email.com">
-                    <input type="email" id="stEmailEscuela" class="form-control" placeholder="preceptor@escuela.com">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button onclick="saveStudent()" class="btn btn-primary">Guardar Alumno</button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-document.addEventListener("DOMContentLoaded", init);
+// Añadir esta función al bloque <script> de students.html
+let currentStudentId = null;
 
-async function init() {
-    await loadCoursesOptions();
-    loadStudents();
-}
-
-async function loadCoursesOptions() {
-    const res = await fetch('/courses/');
-    const courses = await res.json();
-    const sel = document.getElementById('stCurso');
-    const filter = document.getElementById('filterCourse');
+async function manageDevices(id) {
+    currentStudentId = id;
+    document.getElementById('devStudentId').value = id;
+    const res = await fetch(`/devices/student/${id}`); // Necesitarás crear esta ruta GET en devices.py
+    const devices = await res.json();
     
-    courses.forEach(c => {
-        sel.innerHTML += `<option value="${c.id}">${c.nombre}</option>`;
-        filter.innerHTML += `<option value="${c.nombre}">${c.nombre}</option>`;
+    const list = document.getElementById('deviceList');
+    list.innerHTML = devices.length ? "" : "Sin dispositivos registrados.";
+    devices.forEach(d => {
+        list.innerHTML += `
+            <div class="list-group-item d-flex justify-content-between">
+                <div><strong>${d.tipo}</strong>: ${d.nombre_modelo}<br><small>${d.nextdns_device_id}</small></div>
+                <button class="btn btn-sm btn-danger" onclick="removeDevice(${d.id})">x</button>
+            </div>`;
     });
+    new bootstrap.Modal(document.getElementById('modalDevices')).show();
 }
 
-async function loadStudents() {
-    const res = await fetch('/students/');
-    const students = await res.json();
-    const grid = document.getElementById('studentsGrid');
-    grid.innerHTML = "";
-
-    students.forEach(s => {
-        grid.innerHTML += `
-        <div class="col-md-4 mb-3 student-card" data-name="${s.nombre} ${s.apellido}" data-course="${s.curso}">
-            <div class="card h-100 shadow-sm border-0">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <h5 class="card-title">${s.apellido}, ${s.nombre}</h5>
-                        <span class="badge bg-secondary">${s.curso}</span>
-                    </div>
-                    <p class="card-text text-muted small mb-1">
-                        Sexo: ${s.sexo} | Com: ${s.comision || '-'}
-                    </p>
-                    <p class="card-text small">
-                        📧 ${s.email_padre || 'Sin mail'}
-                    </p>
-                    <hr>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="text-primary fw-bold" style="cursor:pointer" onclick="manageDevices(${s.id})">
-                            📱 Dispositivos
-                        </span>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteStudent(${s.id})">
-                            <i class="bi bi-trash"></i> Borrar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        `;
-    });
-}
-
-async function saveStudent() {
+async function saveDevice() {
     const payload = {
-        course_id: document.getElementById('stCurso').value,
-        nombre: document.getElementById('stNombre').value,
-        apellido: document.getElementById('stApellido').value,
-        sexo: document.getElementById('stSexo').value,
-        comision: document.getElementById('stComision').value,
-        email_padre: document.getElementById('stEmailPadre').value,
-        email_escuela: document.getElementById('stEmailEscuela').value
+        student_id: currentStudentId,
+        tipo: document.getElementById('devTipo').value,
+        nombre_modelo: document.getElementById('devModelo').value
     };
-
-    const res = await fetch('/students/add', {
+    const res = await fetch('/devices/add', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(payload)
     });
-
-    if(res.ok) {
-        bootstrap.Modal.getInstance(document.getElementById('modalAddStudent')).hide();
-        loadStudents();
-    } else {
-        alert("Error al guardar");
-    }
+    if(res.ok) manageDevices(currentStudentId);
 }
-
-async function deleteStudent(id) {
-    if(confirm("¿Eliminar alumno? Esto borrará sus dispositivos de NextDNS.")) {
-        await fetch(`/students/delete/${id}`, { method: 'DELETE' });
-        loadStudents();
-    }
-}
-
-// Filtro simple en JS
-document.getElementById('searchBox').addEventListener('keyup', (e) => {
-    const term = e.target.value.toLowerCase();
-    document.querySelectorAll('.student-card').forEach(card => {
-        const txt = card.dataset.name.toLowerCase();
-        card.parentElement.style.display = txt.includes(term) ? 'block' : 'none';
-    });
-});
 </script>
-{% endblock %}
